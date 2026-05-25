@@ -1,6 +1,6 @@
 import { toast } from 'sonner';
 
-export const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://switching-paintball-vista-quizzes.trycloudflare.com'; //|| 'http://localhost:5001'
+export const BASE_URL = '/api/proxy';
 
 export interface ApiClientOptions extends RequestInit {
   timeout?: number;

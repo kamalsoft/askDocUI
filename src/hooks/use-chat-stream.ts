@@ -46,8 +46,15 @@ export function useChat() {
         timestamp: Date.now(),
       };
 
-      const updatedMessages = [...messages, userMsg, assistantMsg];
-      setMessages(updatedMessages);
+      let updatedMessages: ChatMessage[] = [];
+      
+      setMessages((prev) => {
+        // Ensure we don't duplicate the user message if already added
+        const base = prev.some(m => m.id === userMsg.id) ? prev : [...prev, userMsg];
+        const next = [...base, assistantMsg];
+        updatedMessages = next;
+        return next;
+      });
 
       // Generate title if it's the first message
       let finalTitle = chatTitle;
@@ -61,7 +68,9 @@ export function useChat() {
       }
 
       // Persist to SQLite history
-      await docsService.saveConversation(currentChatId, finalTitle, updatedMessages);
+      if (updatedMessages.length > 0) {
+        await docsService.saveConversation(currentChatId, finalTitle, updatedMessages);
+      }
       
       // Invalidate history query to refresh the sidebar
       queryClient.invalidateQueries({ queryKey: ['chat-history'] });

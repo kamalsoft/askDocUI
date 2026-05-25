@@ -11,4 +11,6 @@ export const ENDPOINTS = {
   API_DOCS: '/api-docs',
   HISTORY: '/api/chat/history',
   SYSTEM_INFO: '/api/system/info',
+  MAINTENANCE: '/api/system/maintenance',
+  BACKUP: '/api/system/backup',
 } as const;

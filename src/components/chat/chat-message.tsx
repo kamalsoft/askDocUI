@@ -138,7 +138,14 @@ export const ChatMessage = memo(({ message, isCompact }: { message: ChatMessageT
                 remarkPlugins={[remarkGfm]}
                 components={{
                   pre: ({ children }) => <PreWithCopy isAssistant={isAssistant}>{children}</PreWithCopy>,
-                  code({ node, className, children, ...props }) {
+                code({ 
+                  node, 
+                  className, 
+                  children, 
+                  ref, 
+                  style, 
+                  ...props 
+                }: any) {
                     const match = /language-(\w+)/.exec(className || '');
                     const isInline = !className;
 
@@ -149,7 +156,7 @@ export const ChatMessage = memo(({ message, isCompact }: { message: ChatMessageT
                     if (!isInline && match) {
                       return (
                         <SyntaxHighlighter
-                          style={(isDark ? vscDarkPlus : prism) as { [key: string]: React.CSSProperties }}
+                          style={isDark ? (vscDarkPlus as any) : (prism as any)}
                           language={match[1]}
                           PreTag="div"
                           customStyle={{

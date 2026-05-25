@@ -3,7 +3,7 @@ import {
   QueryRequest, QueryResponse, SystemStatus, 
   SystemMetadata, SystemConfig, HealthCheck 
 } from '@/types/api';
-import { ENDPOINTS } from '../constants/endpoints';
+import { ENDPOINTS } from '@/constants/endpoints';
 
 export const docsService = {
   query: (data: QueryRequest, options?: ApiClientOptions) => 
@@ -59,4 +59,12 @@ export const docsService = {
 
   getSystemInfo: () =>
     fetch(ENDPOINTS.SYSTEM_INFO).then(res => res.json()),
+
+  performMaintenance: (action?: 'vacuum' | 'integrity') =>
+    fetch(ENDPOINTS.MAINTENANCE, { 
+      method: 'POST',
+      body: JSON.stringify({ action: action || 'vacuum' })
+    }).then(res => res.json()),
+
+  getBackupUrl: () => ENDPOINTS.BACKUP,
 };

@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
-import { networkInterfaces, hostname } from 'os';
+import { networkInterfaces, hostname, homedir } from 'os';
 import path from 'path';
+import fs from 'fs';
 import { createHash } from 'crypto';
 
 // Resolve the machine's MAC address as a hardware identifier
@@ -11,7 +12,8 @@ export function getMachineId(): string {
 
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]!) {
-      if (!iface.internal && iface.mac !== '00:00:00:00:00:00') {
+      // Filter for non-internal and likely physical interfaces (standard MAC length)
+      if (!iface.internal && iface.mac && iface.mac !== '00:00:00:00:00:00') {
         macs.push(iface.mac);
       }
     }
@@ -22,8 +24,33 @@ export function getMachineId(): string {
   return createHash('sha256').update(data).digest('hex');
 }
 
-const dbPath = path.join(process.cwd(), 'conversations.db');
-const db = new Database(dbPath);
+function getAppDataDir(): string {
+  const home = homedir();
+  switch (process.platform) {
+    case 'win32':
+      return path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'askDocs');
+    case 'darwin':
+      return path.join(home, 'Library', 'Application Support', 'askDocs');
+    default:
+      return path.join(home, '.local', 'share', 'askDocs');
+  }
+}
+
+const appDir = getAppDataDir();
+if (!fs.existsSync(appDir)) {
+  fs.mkdirSync(appDir, { recursive: true });
+}
+
+export const dbPath = path.join(appDir, 'conversations.db');
+
+// Prevent multiple database instances during Next.js HMR (Hot Module Replacement)
+const globalForDb = global as unknown as { db: Database.Database };
+
+export const db = globalForDb.db || new Database(dbPath);
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForDb.db = db;
+}
 
 // Initialize schema
 db.exec(`
@@ -60,9 +87,41 @@ export const chatDb = {
     const stmt = db.prepare('SELECT * FROM conversations WHERE id = ?');
     const row = stmt.get(id) as any;
     if (row && row.messages) {
-      row.messages = JSON.parse(row.messages);
+      try {
+        row.messages = JSON.parse(row.messages);
+      } catch (e) {
+        console.error(`Failed to parse messages for conversation ${id}:`, e);
+        row.messages = [];
+      }
     }
     return row;
+  },
+
+  getConversationCount: () => {
+    const stmt = db.prepare('SELECT COUNT(*) as count FROM conversations');
+    return (stmt.get() as any).count;
+  },
+
+  getUsageStats: () => {
+    // Gets conversation counts for the last 7 days
+    const stmt = db.prepare(`
+      SELECT strftime('%Y-%m-%d', timestamp/1000, 'unixepoch') as date, count(*) as count 
+      FROM conversations 
+      GROUP BY date 
+      ORDER BY date DESC 
+      LIMIT 7
+    `);
+    return stmt.all();
+  },
+
+  getRecentConversations: (limit: number = 5) => {
+    const stmt = db.prepare('SELECT id, title, timestamp FROM conversations ORDER BY timestamp DESC LIMIT ?');
+    return stmt.all(limit);
+  },
+
+  getAllConversations: () => {
+    const stmt = db.prepare('SELECT id, machine_id, title, timestamp FROM conversations ORDER BY timestamp DESC');
+    return stmt.all();
   },
 
   clearAllHistory: (machineId: string) => {
@@ -76,5 +135,13 @@ export const chatDb = {
 
   deleteConversation: (id: string) => {
     return db.prepare('DELETE FROM conversations WHERE id = ?').run(id);
+  },
+
+  checkIntegrity: () => {
+    return db.prepare('PRAGMA integrity_check').all();
+  },
+
+  vacuum: () => {
+    return db.exec('VACUUM');
   }
 };

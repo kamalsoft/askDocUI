@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { docsService } from '@/services/docs.service';
 import { Cpu, HardDrive, Layers, Activity } from 'lucide-react';
 import { SectionErrorBoundary } from '@/components/shared/section-error-boundary';
+import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
   const { data: status, isLoading: isLoadingStatus } = useQuery({
@@ -18,6 +19,12 @@ export default function DashboardPage() {
       retries: 2 // Leverage the new apiClient retry logic
     }),
   });
+
+  // Avoid hydration mismatch by rendering timestamps only on the client
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const cards = [
     { label: 'Active Model', value: status?.model, icon: Cpu, sub: 'Transformer Core', loading: isLoadingStatus },
@@ -83,9 +90,9 @@ export default function DashboardPage() {
         <SectionErrorBoundary name="System Logs">
           <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 text-slate-100">
              <h3 className="font-semibold mb-4 text-blue-400">System Logs Preview</h3>
-             <div className="space-y-1 font-mono text-[11px] opacity-80">
-                <p>[INFO] {new Date().toISOString()} - Model loader initialized.</p>
-                <p>[INFO] {new Date().toISOString()} - Vector Store: FAISS local index loaded.</p>
+             <div className="space-y-1 font-mono text-[11px] opacity-80" suppressHydrationWarning>
+                <p>[INFO] {mounted ? new Date().toISOString() : 'Synchronizing...'} - Model loader initialized.</p>
+                <p>[INFO] {mounted ? new Date().toISOString() : 'Synchronizing...'} - Vector Store: FAISS local index loaded.</p>
                 <p className="text-blue-400">[METRIC] Inference latency: avg {isLoadingStatus ? '...' : status?.threads ? 120 / status.threads : 0}ms/token</p>
                 <p className="text-emerald-400">[HEALTH] System reporting status UP.</p>
              </div>
