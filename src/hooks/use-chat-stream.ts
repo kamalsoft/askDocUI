@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ChatMessage, QueryMode } from '@/types/api';
 import { docsService } from '@/services/docs.service';
 import { v4 as uuidv4 } from 'uuid';
+import { getMachineId } from '@/lib/machine-id';
 import { useQueryClient } from '@tanstack/react-query';
 
 export function useChat() {
@@ -51,14 +52,18 @@ export function useChat() {
       setMessages((prev) => {
         // Ensure we don't duplicate the user message if already added
         const base = prev.some(m => m.id === userMsg.id) ? prev : [...prev, userMsg];
-        const next = [...base, assistantMsg];
-        updatedMessages = next;
-        return next;
+        updatedMessages = [...base, assistantMsg];
+        return updatedMessages;
       });
 
       // Generate title if it's the first message
       let finalTitle = chatTitle;
-      if (messages.length === 0) {
+      
+      // If this is the start of a new thread, generate a summary title
+      if (messages.length === 0 && !chatId) {
+        // Store current machine ID in local storage for session tracking
+        localStorage.setItem('askdocs_current_chat_id', currentChatId);
+        
         const titleResponse = await docsService.query({
           question: `Summarize this question into a 3-5 word title: "${question}"`,
           mode: 'summarize'

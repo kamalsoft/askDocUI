@@ -29,42 +29,42 @@ export const docsService = {
     apiClient<HealthCheck>(ENDPOINTS.HEALTH, options),
 
   getSwaggerUrl: () => {
-    const baseUrl = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
+    const baseUrl = BASE_URL;
     return `${baseUrl}${ENDPOINTS.API_DOCS}`;
   },
 
   deleteHistory: (id: string) => 
-    fetch(`${ENDPOINTS.HISTORY}?id=${id}`, { method: 'DELETE' }).then(res => res.json()),
+    apiClient(`${ENDPOINTS.HISTORY}?id=${id}`, { method: 'DELETE' }),
 
   clearAllHistory: () =>
-    fetch(`${ENDPOINTS.HISTORY}?all=true`, { method: 'DELETE' }).then(res => res.json()),
+    apiClient(`${ENDPOINTS.HISTORY}?all=true`, { method: 'DELETE' }),
 
   getHistory: () =>
-    fetch(ENDPOINTS.HISTORY).then(res => res.json()),
+    apiClient(ENDPOINTS.HISTORY),
 
   getHistoryItem: (id: string) =>
-    fetch(`${ENDPOINTS.HISTORY}?id=${id}`).then(res => res.json()),
+    apiClient(`${ENDPOINTS.HISTORY}?id=${id}`),
 
   saveConversation: (id: string, title: string, messages: any[]) =>
-    fetch(ENDPOINTS.HISTORY, {
+    apiClient(ENDPOINTS.HISTORY, {
       method: 'POST',
       body: JSON.stringify({ id, title, messages })
-    }).then(res => res.json()),
+    }),
 
   updateChatTitle: (id: string, title: string) =>
-    fetch(ENDPOINTS.HISTORY, { 
+    apiClient(ENDPOINTS.HISTORY, { 
       method: 'PATCH', 
       body: JSON.stringify({ id, title }) 
-    }).then(res => res.json()),
+    }),
 
   getSystemInfo: () =>
-    fetch(ENDPOINTS.SYSTEM_INFO).then(res => res.json()),
+    apiClient(ENDPOINTS.SYSTEM_INFO),
 
   performMaintenance: (action?: 'vacuum' | 'integrity') =>
-    fetch(ENDPOINTS.MAINTENANCE, { 
+    apiClient(ENDPOINTS.MAINTENANCE, { 
       method: 'POST',
       body: JSON.stringify({ action: action || 'vacuum' })
-    }).then(res => res.json()),
+    }),
 
   getBackupUrl: () => ENDPOINTS.BACKUP,
 };

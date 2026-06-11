@@ -4,10 +4,16 @@ import { useQuery } from '@tanstack/react-query';
 import { docsService } from '@/services/docs.service';
 import { X, Cpu, Info, ShieldCheck, Fingerprint } from 'lucide-react';
 
+interface SystemInfo {
+  version: string;
+  machineId: string;
+  archHash: string;
+}
+
 export function AboutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { data: info, isLoading } = useQuery({
+  const { data: info, isLoading } = useQuery<SystemInfo>({
     queryKey: ['system-info'],
-    queryFn: () => docsService.getSystemInfo(),
+    queryFn: () => docsService.getSystemInfo() as Promise<SystemInfo>,
     enabled: isOpen,
   });
 

@@ -7,16 +7,33 @@ import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
+interface MaintenanceResponse {
+  success: boolean;
+  message: string;
+}
+
+interface SystemInfo {
+  version: string;
+  dbSize: string;
+  dbPath: string;
+  conversationCount: number;
+  recentActivity: Array<{
+    id: string;
+    title: string;
+    timestamp: string;
+  }>;
+}
+
 function DatabasePage() {
   const queryClient = useQueryClient();
   const [lastMaintenance, setLastMaintenance] = useState<string | null>(null);
-  const { data: info, isLoading } = useQuery({
+  const { data: info, isLoading } = useQuery<SystemInfo>({
     queryKey: ['system-info'],
-    queryFn: () => docsService.getSystemInfo(),
+    queryFn: () => docsService.getSystemInfo() as Promise<SystemInfo>,
   });
 
-  const maintenanceMutation = useMutation({
-    mutationFn: (action?: 'vacuum' | 'integrity') => docsService.performMaintenance(action),
+  const maintenanceMutation = useMutation<MaintenanceResponse, Error, 'vacuum' | 'integrity' | undefined>({
+    mutationFn: (action) => docsService.performMaintenance(action) as Promise<MaintenanceResponse>,
     onSuccess: (data, action) => {
       queryClient.invalidateQueries({ queryKey: ['system-info'] });
       const title = action === 'integrity' ? 'Integrity Check' : 'Database Optimized';
@@ -42,7 +59,7 @@ function DatabasePage() {
 
     if (!lastCheck || (now - Number(lastCheck)) > weekInMs) {
       maintenanceMutation.mutate('integrity', {
-        onSuccess: (data) => {
+        onSuccess: (data: MaintenanceResponse) => {
           if (data.success) {
             localStorage.setItem(LAST_CHECK_KEY, now.toString());
           }
@@ -133,7 +150,7 @@ function DatabasePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {info?.recentActivity?.map((chat: any) => (
+                {info?.recentActivity?.map((chat) => (
                   <tr key={chat.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100 truncate max-w-[200px]">
                       {chat.title}

@@ -13,6 +13,14 @@ import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Tooltip } from '@/components/shared/tooltip';
 
+interface ChatDetailResponse {
+  messages: any[];
+}
+
+interface MetadataResponse {
+  modes: QueryMode[];
+}
+
 export default function ChatPage() {
   const [input, setInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,16 +41,19 @@ export default function ChatPage() {
 
   const { messages, sendMessage, isLoading, chatId, loadChat, startNewChat } = useChat();
 
-  const { data: metadata, isLoading: isLoadingMetadata } = useQuery({
+  const { data: metadata, isLoading: isLoadingMetadata } = useQuery<MetadataResponse>({
     queryKey: ['metadata'],
-    queryFn: () => docsService.getMetadata(),
+    queryFn: () => docsService.getMetadata() as Promise<MetadataResponse>,
     staleTime: 300000, // Cache modes for 5 minutes
   });
 
   const { data: history = [], isLoading: isLoadingHistory } = useQuery<ChatHistoryItem[]>({
     queryKey: ['chat-history'],
-    queryFn: () => docsService.getHistory(),
+    queryFn: () => docsService.getHistory() as Promise<ChatHistoryItem[]>,
   });
+
+
+
 
   // Automatically set the selectedMode to the first available item if 'answer' is missing
   useEffect(() => {
@@ -136,7 +147,7 @@ export default function ChatPage() {
 
   const loadHistoryItem = async (id: string, title: string) => {
     try {
-      const data = await docsService.getHistoryItem(id);
+      const data = await docsService.getHistoryItem(id) as ChatDetailResponse;
       loadChat(id, title, data.messages);
       handleAutoCollapse();
     } catch (err) {
@@ -144,8 +155,8 @@ export default function ChatPage() {
     }
   };
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => docsService.deleteHistory(id),
+  const deleteMutation = useMutation<void, Error, string>({
+    mutationFn: (id) => docsService.deleteHistory(id) as Promise<void>,
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['chat-history'] });
       if (chatId === id) {
@@ -156,8 +167,8 @@ export default function ChatPage() {
     onError: () => toast.error('Failed to delete conversation'),
   });
 
-  const updateTitleMutation = useMutation({
-    mutationFn: ({ id, title }: { id: string; title: string }) => docsService.updateChatTitle(id, title),
+  const updateTitleMutation = useMutation<void, Error, { id: string; title: string }>({
+    mutationFn: ({ id, title }) => docsService.updateChatTitle(id, title) as Promise<void>,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chat-history'] });
       setEditingId(null);
@@ -166,8 +177,8 @@ export default function ChatPage() {
     onError: () => toast.error('Failed to update title'),
   });
 
-  const clearAllMutation = useMutation({
-    mutationFn: () => docsService.clearAllHistory(),
+  const clearAllMutation = useMutation<void, Error, void>({
+    mutationFn: () => docsService.clearAllHistory() as Promise<void>,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chat-history'] });
       setShowClearConfirm(false);

@@ -1,6 +1,14 @@
 import { toast } from 'sonner';
+import config from '../config.json';
+import { getMachineId } from './machine-id';
 
-export const BASE_URL = '/api/proxy';
+/**
+ * Centralized API configuration.
+ * BASE_URL: The absolute backend URL consumed from config.json.
+ * PROXY_BASE: The local Next.js proxy path used for client-side calls.
+ */
+export const BASE_URL = config.apiBaseUrl.replace(/\/$/, '');
+export const PROXY_BASE = '/api';
 
 export interface ApiClientOptions extends RequestInit {
   timeout?: number;
@@ -14,15 +22,22 @@ export async function apiClient<T>(
   const isDev = process.env.NODE_ENV === 'development';
   const startTime = isDev ? performance.now() : 0;
 
-  // Normalize URL construction to prevent double-slashes or missing slashes
-  const baseUrl = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
-  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const url = `${baseUrl}${path}`;
+  const isServer = typeof window === 'undefined';
+
+  // Sanitize the endpoint: remove leading '/api' if present because PROXY_BASE already includes it
+  const sanitizedEndpoint = endpoint.replace(/^\/?api\//, '');
+  const path = sanitizedEndpoint.startsWith('/') ? sanitizedEndpoint : `/${sanitizedEndpoint}`;
+  
+  // If on server (SSR/Actions), we must use absolute URLs.
+  // If on client, we use the local proxy to handle CORS and secret injection.
+  const url = isServer ? `${BASE_URL}${path}` : `${PROXY_BASE}${path}`;
 
   const { timeout = 60000, retries = 0, ...fetchOptions } = options; 
 
   const headers = {
     'Content-Type': 'application/json',
+    'X-Machine-ID': getMachineId(),
+    ...(isServer && process.env.INTERNAL_SECRET ? { 'X-Internal-Secret': process.env.INTERNAL_SECRET } : {}),
     ...fetchOptions.headers,
   };
 
