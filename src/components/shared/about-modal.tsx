@@ -2,18 +2,13 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { docsService } from '@/services/docs.service';
-import { X, Cpu, Info, ShieldCheck, Fingerprint } from 'lucide-react';
-
-interface SystemInfo {
-  version: string;
-  machineId: string;
-  archHash: string;
-}
+import { X, Cpu, Server, Database } from 'lucide-react';
+import { SystemInfo } from '@/hooks/use-system-status';
 
 export function AboutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { data: info, isLoading } = useQuery<SystemInfo>({
     queryKey: ['system-info'],
-    queryFn: () => docsService.getSystemInfo() as Promise<SystemInfo>,
+    queryFn: () => docsService.getStatus(),
     enabled: isOpen,
   });
 
@@ -33,22 +28,22 @@ export function AboutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
           
           <div className="space-y-1">
             <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">About askDocs</h3>
-            <p className="text-xs font-mono text-blue-600 dark:text-blue-400 font-bold uppercase tracking-widest">Version {info?.version || '...'}</p>
+            <p className="text-xs font-mono text-blue-600 dark:text-blue-400 font-bold uppercase tracking-widest">Status: {info?.status || '...'}</p>
           </div>
 
           <div className="w-full space-y-3 pt-4">
             <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-tighter">
-                <Fingerprint size={14} className="text-blue-500" /> Machine ID
+                <Server size={14} className="text-blue-500" /> Generative Model
               </div>
-              <span className="text-[10px] font-mono text-slate-400 truncate max-w-[180px]">{isLoading ? 'Loading...' : info?.machineId}</span>
+              <span className="text-[10px] font-mono text-slate-400 truncate max-w-[180px]">{isLoading ? 'Loading...' : info?.models?.generative || 'N/A'}</span>
             </div>
             
             <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-tighter">
-                <ShieldCheck size={14} className="text-emerald-500" /> Architecture Hash
+                <Database size={14} className="text-emerald-500" /> Embedding Model
               </div>
-              <span className="text-[10px] font-mono text-slate-400 uppercase">{isLoading ? 'Loading...' : info?.archHash}</span>
+              <span className="text-[10px] font-mono text-slate-400 truncate max-w-[180px]">{isLoading ? 'Loading...' : info?.models?.embedding || 'N/A'}</span>
             </div>
           </div>
 

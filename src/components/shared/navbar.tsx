@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { docsService } from '@/services/docs.service';
 import Link from 'next/link';
-import { Activity, ShieldCheck, ShieldAlert, ShieldX, ExternalLink } from 'lucide-react';
+import { Activity, ShieldCheck, ShieldAlert, ShieldX } from 'lucide-react';
 import { Tooltip } from './tooltip';
 
 export function Navbar() {
@@ -36,16 +36,6 @@ export function Navbar() {
       </div>
 
       <div className="flex items-center gap-6">
-        <a 
-          href={docsService.getSwaggerUrl()} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium text-slate-500 hover:text-blue-600 transition-colors border border-slate-200 dark:border-slate-800"
-        >
-          <ExternalLink size={14} />
-          API Docs
-        </a>
-
         <div className={`flex items-center gap-2 px-3 py-1 rounded-full border border-current bg-opacity-5 ${status.color.replace('text', 'bg')} ${status.color}`}>
           <status.Icon size={14} className={isLoading ? 'animate-spin' : ''} />
           <span className="text-[10px] font-black uppercase tracking-tighter">

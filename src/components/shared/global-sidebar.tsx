@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import Link from 'next/link'; // Keep Link for navigation
 import { usePathname, useRouter } from 'next/navigation';
-import { MessageSquare, LayoutDashboard, Settings, Cpu, ExternalLink, Info, LogOut, LogIn } from 'lucide-react';
+import { MessageSquare, LayoutDashboard, Settings, Cpu, Info, LogOut, LogIn } from 'lucide-react'; // Removed ExternalLink
 import { cn } from '@/lib/utils'; // Assuming standard shadcn-like util
 import { docsService } from '@/services/docs.service';
 import { Tooltip } from './tooltip';
@@ -79,18 +79,6 @@ export function GlobalSidebar() {
             </Link>
           );
         })}
-
-        <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
-          <a
-            href={docsService.getSwaggerUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
-          >
-            <ExternalLink size={18} />
-            API Docs
-          </a>
-        </div>
 
         <button
           onClick={() => setIsAboutOpen(true)}

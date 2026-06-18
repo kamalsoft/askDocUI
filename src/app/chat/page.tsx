@@ -1,45 +1,124 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { docsService } from '@/services/docs.service';
+import { chatService } from '@/services/chat.service';
 import { useChat } from '@/hooks/use-chat-stream';
 import { ChatMessage } from '@/components/chat/chat-message';
-import { Send, Terminal, Sparkles, GitCompare, Loader2, FileSearch, MessageSquare, Download, ChevronDown, Search, History as HistoryIcon, Clock, Plus, Trash2, Edit2, Check, X, AlertTriangle, Menu, PanelLeftClose, Maximize2, Minimize2, Settings2 } from 'lucide-react';
-import { QueryMode, ChatHistoryItem } from '@/types/api';
+import { Send, Terminal, Sparkles, GitCompare, Loader2, FileSearch, MessageSquare, Download, ChevronDown, Search, Plus, X, Menu, Maximize2, Minimize2, Settings2, RefreshCw, Trash2, Pencil, Check } from 'lucide-react';
+import { QueryMode } from '@/types/api';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useDebounce } from '@/hooks/use-debounce';
 import { Tooltip } from '@/components/shared/tooltip';
+import { useSystemStatus } from '@/hooks/use-system-status';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface ChatDetailResponse {
   messages: any[];
 }
-
 interface MetadataResponse {
   modes: QueryMode[];
 }
 
+function SystemStatusIndicator({ isLoading, isError, engineStatus }: { isLoading: boolean; isError: boolean; engineStatus?: string }) {
+  return (
+    <div className="flex items-center gap-2 px-1">
+      <div className={cn(
+        "w-2 h-2 rounded-full transition-all duration-500",
+        isLoading ? "bg-slate-300 animate-pulse" : isError ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" : "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+      )} />
+      <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+        {isLoading ? 'Checking connection...' : isError ? 'Offline' : `Online • ${engineStatus || 'unknown'}`}
+      </span>
+    </div>
+  );
+}
+
 export default function ChatPage() {
+  const params = useParams();
+  const activeChatId = params?.chatId as string | undefined;
+  const router = useRouter();
+
   const [input, setInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedMode, setSelectedMode] = useState<QueryMode>('summarize');
   const [elapsedTime, setElapsedTime] = useState(0);
   const [atBottom, setAtBottom] = useState(true);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const queryClient = useQueryClient();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isCompactView, setIsCompactView] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
 
-  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  // Search/edit state for history
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
 
-  const { messages, sendMessage, isLoading, chatId, loadChat, startNewChat } = useChat();
+  const { messages, sendMessage, isLoading, startNewChat } = useChat(activeChatId);
+
+  // Fetch history list
+  const { data: history, isLoading: isLoadingHistory } = useQuery({
+    queryKey: ['chat-history'],
+    queryFn: () => chatService.getHistory(),
+  });
+
+  const handleDeleteChat = async (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm('Are you sure you want to delete this conversation?')) {
+      try {
+        await chatService.deleteConversation(id);
+        queryClient.invalidateQueries({ queryKey: ['chat-history'] });
+        toast.success('Conversation deleted');
+        if (id === activeChatId) {
+          startNewChat();
+        }
+      } catch (err) {
+        toast.error('Failed to delete conversation');
+      }
+    }
+  };
+
+  const handleClearAll = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm('Are you sure you want to clear ALL conversation history?')) {
+      try {
+        await chatService.clearAllHistory();
+        queryClient.invalidateQueries({ queryKey: ['chat-history'] });
+        toast.success('All history cleared');
+        startNewChat();
+      } catch (err) {
+        toast.error('Failed to clear history');
+      }
+    }
+  };
+
+  const handleStartRename = (id: string, title: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingId(id);
+    setEditingTitle(title);
+  };
+
+  const handleSaveRename = async (id: string) => {
+    if (!editingTitle.trim()) return;
+    try {
+      await chatService.updateTitle(id, editingTitle.trim());
+      queryClient.invalidateQueries({ queryKey: ['chat-history'] });
+      setEditingId(null);
+      toast.success('Conversation renamed');
+    } catch (err) {
+      toast.error('Failed to rename conversation');
+    }
+  };
+
+  const filteredHistory = history?.filter(item => 
+    item.title.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
 
   const { data: metadata, isLoading: isLoadingMetadata } = useQuery<MetadataResponse>({
     queryKey: ['metadata'],
@@ -47,13 +126,14 @@ export default function ChatPage() {
     staleTime: 300000, // Cache modes for 5 minutes
   });
 
-  const { data: history = [], isLoading: isLoadingHistory } = useQuery<ChatHistoryItem[]>({
-    queryKey: ['chat-history'],
-    queryFn: () => docsService.getHistory() as Promise<ChatHistoryItem[]>,
-  });
-
-
-
+  const { 
+    systemInfo, 
+    isLoading: isLoadingSystemInfo, 
+    isError: isSystemInfoError, 
+    isOnline, 
+    refetch: refetchStatus,
+    engineStatus
+  } = useSystemStatus();
 
   // Automatically set the selectedMode to the first available item if 'answer' is missing
   useEffect(() => {
@@ -79,6 +159,13 @@ export default function ChatPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
+
+    // Log the payload to the console to inspect the structure sent to the query endpoint
+    console.log('🚀 [Query Payload]:', {
+      query: input.trim(),
+      mode: selectedMode
+    });
+
     sendMessage(input, selectedMode);
     setInput('');
   };
@@ -128,66 +215,6 @@ export default function ChatPage() {
     URL.revokeObjectURL(url);
   };
 
-  // Filter history based on search keyword
-  const filteredHistory = history.filter(item =>
-    item.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-  );
-
-  // Auto-collapse sidebar on smaller screens when a conversation is selected
-  const handleAutoCollapse = () => {
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
-    }
-  };
-
-  const handleNewChat = () => {
-    startNewChat();
-    handleAutoCollapse();
-  };
-
-  const loadHistoryItem = async (id: string, title: string) => {
-    try {
-      const data = await docsService.getHistoryItem(id) as ChatDetailResponse;
-      loadChat(id, title, data.messages);
-      handleAutoCollapse();
-    } catch (err) {
-      toast.error('Failed to load conversation');
-    }
-  };
-
-  const deleteMutation = useMutation<void, Error, string>({
-    mutationFn: (id) => docsService.deleteHistory(id) as Promise<void>,
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ['chat-history'] });
-      if (chatId === id) {
-        startNewChat();
-      }
-      toast.success('Conversation deleted');
-    },
-    onError: () => toast.error('Failed to delete conversation'),
-  });
-
-  const updateTitleMutation = useMutation<void, Error, { id: string; title: string }>({
-    mutationFn: ({ id, title }) => docsService.updateChatTitle(id, title) as Promise<void>,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chat-history'] });
-      setEditingId(null);
-      toast.success('Title updated');
-    },
-    onError: () => toast.error('Failed to update title'),
-  });
-
-  const clearAllMutation = useMutation<void, Error, void>({
-    mutationFn: () => docsService.clearAllHistory() as Promise<void>,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chat-history'] });
-      setShowClearConfirm(false);
-      startNewChat();
-      toast.success('All history purged');
-    },
-    onError: () => toast.error('Failed to clear history'),
-  });
-
   return (
     <div className="flex h-full overflow-hidden bg-white dark:bg-slate-950">
       {/* Workspace Sidebar */}
@@ -195,30 +222,137 @@ export default function ChatPage() {
         "fixed inset-y-0 left-0 z-40 lg:relative border-r border-slate-200 dark:border-slate-800 p-4 flex flex-col bg-slate-50 dark:bg-slate-900 lg:bg-slate-50/50 lg:dark:bg-slate-900/20 transition-all duration-300 ease-in-out",
         isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:translate-x-0 lg:w-0 lg:p-0 lg:border-none lg:opacity-0 lg:overflow-hidden"
       )}>
-        {/* Search Bar */}
-        <div className="relative mb-6 flex items-center gap-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-          <input
-            type="text"
-            suppressHydrationWarning
-            placeholder="Search history..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-2 pl-9 pr-4 text-xs focus:ring-2 focus:ring-blue-500/20 outline-none transition-all shadow-sm"
-          />
-          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-slate-400">
-            <X size={18} />
+        <div className="flex items-center justify-between mb-6">
+          <span className="text-xs font-black tracking-widest text-blue-600">ASKDOCS</span>
+          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-1">
+            <X size={16} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-6 pr-1 custom-scrollbar min-h-0">
         <button
-          onClick={handleNewChat}
+          onClick={() => startNewChat()}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-lg shadow-blue-500/20 mb-4"
         >
           <Plus size={16} />
           NEW CHAT
         </button>
+
+        {/* Chat History Section */}
+        <div>
+          <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex justify-between items-center">
+            <span>Chat History</span>
+            {history && history.length > 0 && (
+              <button 
+                onClick={handleClearAll}
+                className="text-[9px] text-red-500 hover:text-red-700 hover:underline normal-case font-bold uppercase tracking-widest"
+              >
+                Clear All
+              </button>
+            )}
+          </h3>
+          
+          <div className="relative mb-3">
+            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search history..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 pl-9 pr-8 text-[11px] outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all text-slate-900 dark:text-slate-100"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar pr-1 mb-4">
+            {isLoadingHistory ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-9 w-full bg-slate-100 dark:bg-slate-900/50 rounded-lg animate-pulse" />
+              ))
+            ) : filteredHistory.length === 0 ? (
+              <p className="text-[10px] text-slate-400 italic text-center py-4">No conversations found</p>
+            ) : (
+              filteredHistory.map((chat) => {
+                const isActive = chat.id === activeChatId;
+                const isEditing = chat.id === editingId;
+
+                return (
+                  <div
+                    key={chat.id}
+                    className={cn(
+                      "group flex items-center justify-between px-3 py-2 rounded-xl text-left border transition-all text-xs relative",
+                      isActive
+                        ? "bg-white dark:bg-slate-800 border-blue-200 dark:border-blue-900 shadow-sm text-blue-600 dark:text-blue-400 font-bold"
+                        : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900"
+                    )}
+                  >
+                    {isEditing ? (
+                      <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSaveRename(chat.id)}
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-xs text-slate-900 dark:text-slate-100 font-normal outline-none focus:border-blue-500"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleSaveRename(chat.id)}
+                          className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 rounded"
+                        >
+                          <Check size={12} />
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <Link
+                          href={`/chat/${chat.id}`}
+                          className="flex-1 truncate pr-8 flex items-center gap-2"
+                        >
+                          <MessageSquare size={13} className="shrink-0 opacity-70" />
+                          <span className="truncate">{chat.title}</span>
+                        </Link>
+                        
+                        <div className={cn(
+                          "absolute right-2 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 pl-2 transition-opacity duration-150 rounded-lg",
+                          isActive ? "bg-white dark:bg-slate-800" : "bg-slate-100 dark:bg-slate-900"
+                        )}>
+                          <button
+                            onClick={(e) => handleStartRename(chat.id, chat.title, e)}
+                            className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded"
+                            title="Rename"
+                          >
+                            <Pencil size={11} />
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteChat(chat.id, e)}
+                            className="p-1 text-slate-400 hover:text-red-600 rounded"
+                            title="Delete"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
 
         <div>
           <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Inference Mode</h3>
@@ -282,101 +416,6 @@ export default function ChatPage() {
             </div>
           )}
         </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <button 
-              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-              className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-            >
-              <HistoryIcon size={12} />
-              Recent History
-              <ChevronDown size={12} className={cn("transition-transform duration-200", isHistoryOpen && "rotate-180")} />
-            </button>
-            {isHistoryOpen && history.length > 0 && (
-              <button 
-                onClick={() => setShowClearConfirm(true)}
-                className="text-[9px] font-black text-red-500 hover:text-red-600 transition-colors uppercase tracking-widest px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-950/30"
-              >
-                Clear All
-              </button>
-            )}
-          </div>
-          {isHistoryOpen && (
-            <div className="space-y-1 animate-in fade-in slide-in-from-top-1 duration-200 mb-4">
-              {isLoadingHistory ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="w-full h-10 bg-slate-100 dark:bg-slate-900 rounded-xl animate-pulse" />
-                ))
-              ) : filteredHistory.length > 0 ? (
-                filteredHistory.map((item) => (
-                  <div
-                    key={item.id}
-                    className={cn(
-                      "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-left hover:bg-white dark:hover:bg-slate-800 transition-all group",
-                      chatId === item.id && "bg-white dark:bg-slate-800 border border-blue-100 dark:border-blue-900"
-                    )}
-                  >
-                    {editingId === item.id ? (
-                      <div className="flex-1 flex items-center gap-1.5 min-w-0">
-                        <input
-                          type="text"
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded px-1.5 py-0.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 min-w-0"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') updateTitleMutation.mutate({ id: item.id, title: editTitle });
-                            if (e.key === 'Escape') setEditingId(null);
-                          }}
-                        />
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button onClick={() => updateTitleMutation.mutate({ id: item.id, title: editTitle })} className="text-emerald-500 hover:text-emerald-600">
-                            <Check size={14} />
-                          </button>
-                          <button onClick={() => setEditingId(null)} className="text-slate-400 hover:text-slate-600">
-                            <X size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <button 
-                          onClick={() => loadHistoryItem(item.id, item.title)}
-                          className="flex-1 flex flex-col items-start min-w-0"
-                        >
-                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate w-full group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                            {item.title}
-                          </span>
-                          <div className="flex items-center gap-1 text-[9px] text-slate-400">
-                            <Clock size={10} />
-                            {new Date(item.timestamp).toLocaleDateString()}
-                          </div>
-                        </button>
-                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0">
-                          <button
-                            onClick={() => { setEditingId(item.id); setEditTitle(item.title); }}
-                            className="p-1 hover:text-blue-500 text-slate-400 transition-colors"
-                          >
-                            <Edit2 size={12} />
-                          </button>
-                          <button
-                            onClick={() => deleteMutation.mutate(item.id)}
-                            className="p-1 hover:text-red-500 text-slate-400 transition-colors"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <p className="text-[10px] text-slate-400 italic px-3">No matching history</p>
-              )}
-            </div>
-          )}
-        </div>
         </div>
 
         {messages.length > 0 && (
@@ -390,6 +429,26 @@ export default function ChatPage() {
             </button>
           </div>
         )}
+
+        {/* System Status Indicator */}
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Live Status</span>
+            <button
+              onClick={() => refetchStatus()}
+              disabled={isLoadingSystemInfo}
+              className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md text-slate-400 hover:text-blue-500 transition-all disabled:opacity-50"
+              title="Refresh connection status"
+            >
+              <RefreshCw size={12} className={cn(isLoadingSystemInfo && "animate-spin")} />
+            </button>
+          </div>
+          <SystemStatusIndicator 
+            isLoading={isLoadingSystemInfo} 
+            isError={isSystemInfoError || (!isLoadingSystemInfo && !isOnline)}
+            engineStatus={engineStatus}
+          />
+        </div>
       </div>
 
       {/* Main Chat View */}
@@ -495,37 +554,6 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
-
-      {/* Clear All Confirmation Modal */}
-      {showClearConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 px-4">
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-center w-14 h-14 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-500 rounded-2xl mb-6 mx-auto">
-              <AlertTriangle size={32} />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 text-center mb-2">Purge All History?</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-8">
-              This will permanently delete all local conversation history for this machine. This action is irreversible.
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                disabled={clearAllMutation.isPending}
-                onClick={() => clearAllMutation.mutate()}
-                className="w-full py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-black rounded-xl shadow-lg shadow-red-500/20 transition-all uppercase tracking-widest flex items-center justify-center gap-2"
-              >
-                {clearAllMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : 'Confirm Purge'}
-              </button>
-              <button
-                disabled={clearAllMutation.isPending}
-                onClick={() => setShowClearConfirm(false)}
-                className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-black rounded-xl transition-all uppercase tracking-widest"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

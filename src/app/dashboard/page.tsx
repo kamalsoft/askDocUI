@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { docsService } from '@/services/docs.service';
-import { Cpu, HardDrive, Layers, Activity } from 'lucide-react';
+import { Cpu, HardDrive, Layers, Activity, Server, Database } from 'lucide-react';
 import { SectionErrorBoundary } from '@/components/shared/section-error-boundary';
 import { useEffect, useState } from 'react';
 
@@ -27,10 +27,11 @@ export default function DashboardPage() {
   }, []);
 
   const cards = [
-    { label: 'Active Model', value: status?.model, icon: Cpu, sub: 'Transformer Core', loading: isLoadingStatus },
-    { label: 'Threads', value: status?.threads, icon: Activity, sub: 'CPU Inference Parallelism', loading: isLoadingStatus },
-    { label: 'Cache Dir', value: status?.cacheDir, icon: HardDrive, sub: 'Local Storage Path', loading: isLoadingStatus },
-    { label: 'Downloaded', value: metadata?.downloaded_models?.length, icon: Layers, sub: 'Models in Cache', loading: isLoadingMetadata },
+    { label: 'Engine Status', value: status?.status || 'N/A', icon: Activity, sub: 'Transformer Lifecycle', loading: isLoadingStatus },
+    { label: 'Generative Model', value: status?.models?.generative || 'N/A', icon: Server, sub: 'Response Synthesis', loading: isLoadingStatus },
+    { label: 'Embedding Model', value: status?.models?.embedding || 'N/A', icon: Database, sub: 'Vector Generation', loading: isLoadingStatus },
+    { label: 'ONNX Threads', value: status?.onnx_threads ?? 'N/A', icon: Cpu, sub: 'Parallel Execution Units', loading: isLoadingStatus },
+    { label: 'Downloaded Models', value: metadata?.downloaded_models?.length || 0, icon: HardDrive, sub: 'Models in Cache', loading: isLoadingMetadata },
   ];
 
   return (
@@ -48,7 +49,7 @@ export default function DashboardPage() {
                 <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg">
                   <card.icon size={20} />
                 </div>
-                <div className={`w-2 h-2 rounded-full ${isLoadingStatus ? 'bg-slate-300 animate-pulse' : status?.ready ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                <div className={`w-2 h-2 rounded-full ${isLoadingStatus ? 'bg-slate-300 animate-pulse' : status?.status === 'ready' ? 'bg-emerald-500' : 'bg-red-500'}`} />
               </div>
               <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{card.label}</p>
               <p className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate mt-1">
@@ -93,7 +94,7 @@ export default function DashboardPage() {
              <div className="space-y-1 font-mono text-[11px] opacity-80" suppressHydrationWarning>
                 <p>[INFO] {mounted ? new Date().toISOString() : 'Synchronizing...'} - Model loader initialized.</p>
                 <p>[INFO] {mounted ? new Date().toISOString() : 'Synchronizing...'} - Vector Store: FAISS local index loaded.</p>
-                <p className="text-blue-400">[METRIC] Inference latency: avg {isLoadingStatus ? '...' : status?.threads ? 120 / status.threads : 0}ms/token</p>
+                <p className="text-blue-400">[METRIC] Inference latency: avg {isLoadingStatus ? '...' : status?.onnx_threads ? 120 / status.onnx_threads : 0}ms/token</p>
                 <p className="text-emerald-400">[HEALTH] System reporting status UP.</p>
              </div>
           </div>

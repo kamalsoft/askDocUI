@@ -24,11 +24,13 @@ export interface QueryResponse {
   };
 }
 
-export interface SystemStatus {
-  model: string;
-  ready: boolean;
-  threads: number;
-  cacheDir: string;
+export interface SystemInfo {
+  status: string;
+  models: {
+    embedding: string;
+    generative: string;
+  };
+  onnx_threads: number;
 }
 
 export interface SystemMetadata {

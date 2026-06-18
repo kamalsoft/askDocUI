@@ -7,12 +7,26 @@ import { getMachineId } from './machine-id';
  * BASE_URL: The absolute backend URL consumed from config.json.
  * PROXY_BASE: The local Next.js proxy path used for client-side calls.
  */
-export const BASE_URL = config.apiBaseUrl.replace(/\/$/, '');
+export const BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || config.apiBaseUrl).replace(/\/$/, '');
 export const PROXY_BASE = '/api';
+
+// Define the local host for server-side proxying
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 export interface ApiClientOptions extends RequestInit {
   timeout?: number;
   retries?: number;
+}
+
+export class ApiError extends Error {
+  status: number;
+  details?: string;
+  constructor(message: string, status: number, details?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.details = details;
+  }
 }
 
 export async function apiClient<T>(
@@ -24,13 +38,16 @@ export async function apiClient<T>(
 
   const isServer = typeof window === 'undefined';
 
-  // Sanitize the endpoint: remove leading '/api' if present because PROXY_BASE already includes it
-  const sanitizedEndpoint = endpoint.replace(/^\/?api\//, '');
-  const path = sanitizedEndpoint.startsWith('/') ? sanitizedEndpoint : `/${sanitizedEndpoint}`;
+  // Sanitize the endpoint: remove leading '/api' and ensure exactly one leading slash
+  const sanitizedEndpoint = endpoint.replace(/^\/?api\//, '').replace(/^\/+/, '');
+  const path = sanitizedEndpoint ? `/${sanitizedEndpoint}` : '';
   
-  // If on server (SSR/Actions), we must use absolute URLs.
-  // If on client, we use the local proxy to handle CORS and secret injection.
-  const url = isServer ? `${BASE_URL}${path}` : `${PROXY_BASE}${path}`;
+  // Enforce Option 2: Force all calls through the proxy by using the local APP_URL on the server
+  // If on the client, the relative path /api/... will use the current browser origin.
+  // If your browser says https://localhost, it will try https://localhost/api/...
+  const url = isServer 
+    ? `${APP_URL}${PROXY_BASE}${path}` 
+    : `${PROXY_BASE}${path}`;
 
   const { timeout = 60000, retries = 0, ...fetchOptions } = options; 
 
@@ -54,7 +71,7 @@ export async function apiClient<T>(
             attempt > 0 ? `(Retry ${attempt}/${retries})` : ''
           }`
         );
-        console.log('Full URL:', url);
+
         console.log('Headers:', headers);
         console.log('Timeout:', `${timeout}ms`);
         if (fetchOptions.body) {
@@ -83,7 +100,9 @@ export async function apiClient<T>(
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `API Error: ${response.status} ${response.statusText} at ${url}`);
+        const errorMessage = errorData.error || errorData.message || `API Error: ${response.status} ${response.statusText}`;
+        const errorDetails = errorData.details;
+        throw new ApiError(errorMessage, response.status, errorDetails);
       }
 
       if (response.status === 204) {
