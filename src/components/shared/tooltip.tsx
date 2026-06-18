@@ -10,13 +10,17 @@ export function Tooltip({
   side = 'top',
   align = 'center',
   className,
+  disabled = false,
 }: {
   children: React.ReactNode;
   content: React.ReactNode;
   side?: 'top' | 'right' | 'bottom' | 'left';
   align?: 'start' | 'center' | 'end';
   className?: string;
+  disabled?: boolean;
 }) {
+  if (disabled) return <>{children}</>;
+
   return (
     <TooltipPrimitive.Root delayDuration={300}>
       <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>

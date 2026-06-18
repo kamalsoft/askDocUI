@@ -44,7 +44,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <SectionErrorBoundary name="Performance Metrics">
           {cards.map((card) => (
-            <div key={card.label} className="p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div key={card.label} className="p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:scale-105 transition-transform duration-200">
               <div className="flex items-center justify-between mb-4">
                 <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg">
                   <card.icon size={20} />
@@ -67,7 +67,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <SectionErrorBoundary name="Model Registry">
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
+          <div className="p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:scale-105 transition-transform duration-200">
              <h3 className="font-semibold mb-4 flex items-center gap-2">
                <Layers size={18} className="text-blue-500" /> Cached Model Registry
              </h3>

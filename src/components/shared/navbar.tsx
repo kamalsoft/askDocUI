@@ -36,7 +36,7 @@ export function Navbar() {
       </div>
 
       <div className="flex items-center gap-6">
-        <div className={`flex items-center gap-2 px-3 py-1 rounded-full border border-current bg-opacity-5 ${status.color.replace('text', 'bg')} ${status.color}`}>
+        <div className={`tour-system-status flex items-center gap-2 px-3 py-1 rounded-full border border-current bg-opacity-5 ${status.color.replace('text', 'bg')} ${status.color}`}>
           <status.Icon size={14} className={isLoading ? 'animate-spin' : ''} />
           <span className="text-[10px] font-black uppercase tracking-tighter">
             {status.label}

@@ -13,6 +13,9 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Tooltip } from '@/components/shared/tooltip';
 import { useSystemStatus } from '@/hooks/use-system-status';
+import { Skeleton } from '@/components/shared/skeleton';
+import { motion } from 'framer-motion';
+import { ErrorFeedback } from '@/components/shared/error-feedback';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -51,6 +54,7 @@ export default function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCompactView, setIsCompactView] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<'history' | 'modes'>('history');
 
   // Search/edit state for history
   const [searchQuery, setSearchQuery] = useState('');
@@ -216,7 +220,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-full overflow-hidden bg-white dark:bg-slate-950">
+    <motion.div className="flex h-full overflow-hidden bg-white dark:bg-slate-950" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
       {/* Workspace Sidebar */}
       <div className={cn(
         "fixed inset-y-0 left-0 z-40 lg:relative border-r border-slate-200 dark:border-slate-800 p-4 flex flex-col bg-slate-50 dark:bg-slate-900 lg:bg-slate-50/50 lg:dark:bg-slate-900/20 transition-all duration-300 ease-in-out",
@@ -230,162 +234,165 @@ export default function ChatPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-6 pr-1 custom-scrollbar min-h-0">
-        <button
-          onClick={() => startNewChat()}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-lg shadow-blue-500/20 mb-4"
-        >
+          <button 
+            onClick={() => startNewChat()} 
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-lg shadow-blue-500/20 mb-4 hover:scale-105"
+          >
           <Plus size={16} />
           NEW CHAT
         </button>
 
-        {/* Chat History Section */}
-        <div>
-          <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex justify-between items-center">
-            <span>Chat History</span>
-            {history && history.length > 0 && (
-              <button 
-                onClick={handleClearAll}
-                className="text-[9px] text-red-500 hover:text-red-700 hover:underline normal-case font-bold uppercase tracking-widest"
-              >
-                Clear All
-              </button>
-            )}
-          </h3>
-          
-          <div className="relative mb-3">
-            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search history..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 pl-9 pr-8 text-[11px] outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all text-slate-900 dark:text-slate-100"
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              >
-                <X size={12} />
-              </button>
-            )}
-          </div>
+        <div className="flex bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-xl mb-4">
+            <button 
+              onClick={() => setSidebarTab('history')} 
+              className={cn("flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all hover:scale-105 ", sidebarTab === 'history' ? "bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300")}
+          >
+            History
+          </button>
+            <button 
+              onClick={() => setSidebarTab('modes')} 
+              className={cn("flex-1 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all hover:scale-105 ", sidebarTab === 'modes' ? "bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300")}
+          >
+            Modes
+          </button>
+        </div>
 
-          <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar pr-1 mb-4">
-            {isLoadingHistory ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-9 w-full bg-slate-100 dark:bg-slate-900/50 rounded-lg animate-pulse" />
-              ))
-            ) : filteredHistory.length === 0 ? (
-              <p className="text-[10px] text-slate-400 italic text-center py-4">No conversations found</p>
-            ) : (
-              filteredHistory.map((chat) => {
-                const isActive = chat.id === activeChatId;
-                const isEditing = chat.id === editingId;
+        {sidebarTab === 'history' ? (
+          <div>
+            <div className="relative mb-3">
+              <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search history..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 pl-9 pr-8 text-[11px] outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all text-slate-900 dark:text-slate-100"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
 
-                return (
-                  <div
-                    key={chat.id}
-                    className={cn(
-                      "group flex items-center justify-between px-3 py-2 rounded-xl text-left border transition-all text-xs relative",
-                      isActive
-                        ? "bg-white dark:bg-slate-800 border-blue-200 dark:border-blue-900 shadow-sm text-blue-600 dark:text-blue-400 font-bold"
-                        : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900"
-                    )}
-                  >
-                    {isEditing ? (
-                      <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="text"
-                          value={editingTitle}
-                          onChange={(e) => setEditingTitle(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSaveRename(chat.id)}
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-xs text-slate-900 dark:text-slate-100 font-normal outline-none focus:border-blue-500"
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => handleSaveRename(chat.id)}
-                          className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 rounded"
-                        >
-                          <Check size={12} />
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <Link
-                          href={`/chat/${chat.id}`}
-                          className="flex-1 truncate pr-8 flex items-center gap-2"
-                        >
-                          <MessageSquare size={13} className="shrink-0 opacity-70" />
-                          <span className="truncate">{chat.title}</span>
-                        </Link>
-                        
-                        <div className={cn(
-                          "absolute right-2 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 pl-2 transition-opacity duration-150 rounded-lg",
-                          isActive ? "bg-white dark:bg-slate-800" : "bg-slate-100 dark:bg-slate-900"
-                        )}>
+            <div className="space-y-1 flex-1 overflow-y-auto custom-scrollbar pr-1 mb-4 h-[calc(100vh-250px)]">
+              {isLoadingHistory ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} variant="card" className="h-9 w-full" />
+                ))
+              ) : filteredHistory.length === 0 ? (
+                <p className="text-[10px] text-slate-400 italic text-center py-4">No conversations found</p>
+              ) : (
+                filteredHistory.map((chat) => {
+                  const isActive = chat.id === activeChatId;
+                  const isEditing = chat.id === editingId;
+
+                  return (
+                    <div
+                      key={chat.id}
+                      className={cn(
+                        "group flex items-center justify-between px-3 py-2 rounded-xl text-left border transition-all text-xs relative",
+                        isActive
+                          ? "bg-white dark:bg-slate-800 border-blue-200 dark:border-blue-900 shadow-sm text-blue-600 dark:text-blue-400 font-bold"
+                          : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900"
+                      )}
+                    >
+                      {isEditing ? (
+                        <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSaveRename(chat.id)}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-xs text-slate-900 dark:text-slate-100 font-normal outline-none focus:border-blue-500"
+                            autoFocus
+                          />
                           <button
-                            onClick={(e) => handleStartRename(chat.id, chat.title, e)}
-                            className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded"
-                            title="Rename"
+                            onClick={() => handleSaveRename(chat.id)}
+                            className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 rounded"
                           >
-                            <Pencil size={11} />
+                            <Check size={12} />
                           </button>
                           <button
-                            onClick={(e) => handleDeleteChat(chat.id, e)}
-                            className="p-1 text-slate-400 hover:text-red-600 rounded"
-                            title="Delete"
+                            onClick={() => setEditingId(null)}
+                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 rounded"
                           >
-                            <Trash2 size={11} />
+                            <X size={12} />
                           </button>
                         </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Inference Mode</h3>
-          <div className="space-y-2">
-            {isLoadingMetadata ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <div 
-                  key={i} 
-                  className="w-full h-14 bg-slate-100 dark:bg-slate-900 rounded-xl animate-pulse border border-transparent" 
-                />
-              ))
-            ) : (
-              activeModes.map((mode) => (
-                <Tooltip key={mode.id} content={mode.desc} side="right">
-                  <button
-                    onClick={() => setSelectedMode(mode.id as QueryMode)}
-                    className={`w-full flex flex-col items-start gap-1 px-3 py-2.5 rounded-xl text-left transition-all border ${
-                      selectedMode === mode.id
-                        ? 'bg-white dark:bg-slate-800 border-blue-200 dark:border-blue-900 shadow-sm text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-900'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 font-semibold text-sm">
-                      <mode.icon size={14} />
-                      {mode.label}
+                      ) : (
+                        <>
+                          <Link
+                            href={`/chat/${chat.id}`}
+                            className="flex-1 truncate pr-8 flex items-center gap-2"
+                          >
+                            <MessageSquare size={13} className="shrink-0 opacity-70" />
+                            <span className="truncate">{chat.title}</span>
+                          </Link>
+                          
+                          <div className={cn(
+                            "absolute right-2 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 pl-2 transition-opacity duration-150 rounded-lg",
+                            isActive ? "bg-white dark:bg-slate-800" : "bg-slate-100 dark:bg-slate-900"
+                          )}>
+                            <button
+                              onClick={(e) => handleStartRename(chat.id, chat.title, e)}
+                              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded"
+                              title="Rename"
+                            >
+                              <Pencil size={11} />
+                            </button>
+                            <button
+                              onClick={(e) => handleDeleteChat(chat.id, e)}
+                              className="p-1 text-slate-400 hover:text-red-600 rounded"
+                              title="Delete"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <span className="text-[10px] opacity-70 font-medium leading-none">{mode.desc}</span>
-                  </button>
-                </Tooltip>
-              ))
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div>
+            <div className="space-y-2">
+              {isLoadingMetadata ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div 
+                    key={i} 
+                    className="w-full h-14 bg-slate-100 dark:bg-slate-900 rounded-xl animate-pulse border border-transparent" 
+                  />
+                ))
+              ) : (
+                activeModes.map((mode) => (
+                  <Tooltip key={mode.id} content={mode.desc} side="right">
+                    <button
+                      onClick={() => setSelectedMode(mode.id as QueryMode)}
+                       className={`w-full flex flex-col items-start gap-1 px-3 py-2.5 rounded-xl text-left transition-all border hover:scale-105 ${
+                         selectedMode === mode.id
+                           ? 'bg-white dark:bg-slate-800 border-blue-200 dark:border-blue-900 shadow-sm text-blue-600 dark:text-blue-400'
+                           : 'border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-900'
+                       }`}
+                    >
+                      <div className="flex items-center gap-2 font-semibold text-sm">
+                        <mode.icon size={14} />
+                        {mode.label}
+                      </div>
+                      <span className="text-[10px] opacity-70 font-medium leading-none">{mode.desc}</span>
+                    </button>
+                  </Tooltip>
+                ))
+              )}
+            </div>
+          </div>
+        )}
 
         <div>
           <button 
@@ -443,11 +450,15 @@ export default function ChatPage() {
               <RefreshCw size={12} className={cn(isLoadingSystemInfo && "animate-spin")} />
             </button>
           </div>
-          <SystemStatusIndicator 
-            isLoading={isLoadingSystemInfo} 
-            isError={isSystemInfoError || (!isLoadingSystemInfo && !isOnline)}
-            engineStatus={engineStatus}
-          />
+           {isSystemInfoError ? (
+             <ErrorFeedback message="Failed to load system status" onRetry={refetchStatus} />
+           ) : (
+             <SystemStatusIndicator 
+               isLoading={isLoadingSystemInfo} 
+               isError={isSystemInfoError || (!isLoadingSystemInfo && !isOnline)}
+               engineStatus={engineStatus}
+             />
+           )}
         </div>
       </div>
 
@@ -485,75 +496,71 @@ export default function ChatPage() {
             itemContent={(_, msg) => <ChatMessage message={msg} isCompact={isCompactView} />}
             components={{
               Footer: () => isLoading ? (
-                <div className="p-8 flex gap-4 animate-pulse border-y border-slate-50 dark:border-slate-900">
-                  <div className="w-8 h-8 rounded bg-slate-200 dark:bg-slate-800 shrink-0" />
-                  <div className="flex-1 space-y-3">
-                    <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded w-1/4" />
-                    <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
-                    <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded w-1/2" />
-                  </div>
-                </div>
-              ) : <div className="h-8" />
+                <Skeleton variant="text" lines={3} className="space-y-2" />
+              ) : <div className="h-32" /> // Extra padding at the bottom to accommodate floating input
             }}
           />
         )}
 
-        {/* Query Input Zone */}
-        <div className="p-6 border-t border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl">
-          {/* Floating Scroll to Bottom Button */}
-          {!atBottom && messages.length > 0 && (
-            <button
-              onClick={() => virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, align: 'end', behavior: 'smooth' })}
-              className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full shadow-xl text-xs font-bold text-blue-600 dark:text-blue-400 animate-in fade-in slide-in-from-bottom-4 duration-300 hover:scale-105 transition-transform"
-            >
-              <ChevronDown size={14} className="animate-bounce" />
-              Latest Messages
-            </button>
-          )}
+        {/* Floating Input Island */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4 z-20 pointer-events-none">
+          <div className="pointer-events-auto">
+            {/* Floating Scroll to Bottom Button */}
+            {!atBottom && messages.length > 0 && (
+              <button
+                onClick={() => virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, align: 'end', behavior: 'smooth' })}
+                className="absolute -top-14 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur border border-slate-200 dark:border-slate-800 rounded-full shadow-xl text-xs font-bold text-blue-600 dark:text-blue-400 animate-in fade-in slide-in-from-bottom-4 duration-300 hover:scale-105 transition-transform"
+              >
+                <ChevronDown size={14} className="animate-bounce" />
+                Latest Messages
+              </button>
+            )}
 
-          {isLoading && elapsedTime >= 10 && (
-            <div className="max-w-4xl mx-auto mb-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest animate-pulse">
-                  Processing complex query...
-                </span>
-                <span className="text-[10px] font-mono text-slate-400">{elapsedTime}s elapsed</span>
+            {isLoading && elapsedTime >= 10 && (
+              <div className="mb-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-amber-500/20 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest animate-pulse">
+                    Processing complex query...
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">{elapsedTime}s elapsed</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-amber-500 transition-all duration-1000 ease-linear"
+                    style={{ width: `${Math.min((elapsedTime / 45) * 100, 100)}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-amber-500 transition-all duration-1000 ease-linear"
-                  style={{ width: `${Math.min((elapsedTime / 45) * 100, 100)}%` }}
-                />
+            )}
+            
+            <form onSubmit={handleSubmit} className="relative group bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] border border-slate-200/50 dark:border-slate-700/50 p-2 flex items-center transition-all hover:shadow-[0_8px_40px_rgb(0,0,0,0.16)] dark:hover:shadow-[0_8px_40px_rgb(0,0,0,0.4)]">
+              <div className="pl-3 pr-2 flex items-center">
+                  {isLoading ? <Loader2 size={20} className="text-blue-500 animate-spin" /> : <Sparkles size={20} className="text-blue-500/70 group-focus-within:text-blue-600 transition-colors" />}
               </div>
+              <input
+                type="text"
+
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={`Ask a question in ${selectedMode} mode...`}
+                className="flex-1 bg-transparent py-3 px-2 text-[15px] outline-none text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                className="p-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:hover:scale-100 disabled:grayscale transition-all shadow-md shadow-blue-500/20"
+              >
+                <Send size={18} className={cn(isLoading && "animate-pulse")} />
+              </button>
+            </form>
+            <div className="flex items-center justify-center gap-4 mt-3 opacity-60 hover:opacity-100 transition-opacity">
+               <span className="text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-[0.2em]">askDocs Engine v1.0.4</span>
+               <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+               <span className="text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-[0.2em]">RAG Optimized</span>
             </div>
-          )}
-          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative group">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                {isLoading ? <Loader2 size={18} className="text-blue-500 animate-spin" /> : <Sparkles size={18} className="text-slate-400 group-focus-within:text-blue-500 transition-colors" />}
-            </div>
-            <input
-              type="text"
-              suppressHydrationWarning
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={`Ask a question in ${selectedMode} mode...`}
-              className="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl py-4 pl-12 pr-14 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all outline-none text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !input.trim()}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-30 disabled:grayscale transition-all shadow-lg shadow-blue-500/20"
-            >
-              <Send size={18} />
-            </button>
-          </form>
-          <div className="flex items-center justify-center gap-4 mt-4">
-             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">askDocs Engine v1.0.4</span>
-             <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
-             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">RAG Optimized</span>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

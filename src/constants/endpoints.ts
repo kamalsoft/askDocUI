@@ -29,7 +29,7 @@ export const ENDPOINTS = {
   }],
   HEALTH: [{
     method: 'GET',
-    url: '/health',
+    url: '/api/health',
     description: 'Performs a health check on the askDocs engine to ensure all components are functioning properly.'
   }]
 } as const;

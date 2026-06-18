@@ -202,7 +202,7 @@ export const ChatMessage = memo(({ message, isCompact }: { message: ChatMessageT
               <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5">
                 <Clock size={10} className="text-slate-500" /> 
-                {message.metadata.timings.total_inference_ms}ms
+                {message.metadata?.timings?.total_inference_ms ?? 0}ms
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-200 dark:bg-slate-800" />
               <span className="flex items-center gap-1.5">

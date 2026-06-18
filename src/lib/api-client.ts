@@ -11,7 +11,7 @@ export const BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || config.apiBaseU
 export const PROXY_BASE = '/api';
 
 // Define the local host for server-side proxying
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '');
+const APP_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || config.apiBaseUrl).replace(/\/$/, '');
 
 export interface ApiClientOptions extends RequestInit {
   timeout?: number;
@@ -38,16 +38,8 @@ export async function apiClient<T>(
 
   const isServer = typeof window === 'undefined';
 
-  // Sanitize the endpoint: remove leading '/api' and ensure exactly one leading slash
-  const sanitizedEndpoint = endpoint.replace(/^\/?api\//, '').replace(/^\/+/, '');
-  const path = sanitizedEndpoint ? `/${sanitizedEndpoint}` : '';
-  
-  // Enforce Option 2: Force all calls through the proxy by using the local APP_URL on the server
-  // If on the client, the relative path /api/... will use the current browser origin.
-  // If your browser says https://localhost, it will try https://localhost/api/...
-  const url = isServer 
-    ? `${APP_URL}${PROXY_BASE}${path}` 
-    : `${PROXY_BASE}${path}`;
+  // Use the endpoint as provided. It should already include the /api prefix.
+  const url = isServer ? `${APP_URL}${endpoint}` : endpoint;
 
   const { timeout = 60000, retries = 0, ...fetchOptions } = options; 
 
@@ -67,7 +59,7 @@ export async function apiClient<T>(
     try {
       if (isDev) {
         console.groupCollapsed(
-          `🚀 [API Request] ${fetchOptions.method || 'GET'} ${path} ${
+          `🚀 [API Request] ${fetchOptions.method || 'GET'} ${endpoint} ${
             attempt > 0 ? `(Retry ${attempt}/${retries})` : ''
           }`
         );
@@ -88,6 +80,7 @@ export async function apiClient<T>(
         ...fetchOptions,
         headers,
         signal: controller.signal,
+        ...(isServer ? {} : { credentials: 'include' }),
       });
 
       clearTimeout(timeoutId);
@@ -95,7 +88,7 @@ export async function apiClient<T>(
       if (isDev) {
         const duration = (performance.now() - startTime).toFixed(2);
         const statusColor = response.ok ? 'color: #10b981' : 'color: #ef4444';
-        console.log(`%c📦 [API Response] ${response.status} ${response.statusText} (${duration}ms) for ${path}`, statusColor);
+        console.log(`%c📦 [API Response] ${response.status} ${response.statusText} (${duration}ms) for ${endpoint}`, statusColor);
       }
 
       if (!response.ok) {
