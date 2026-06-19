@@ -8,7 +8,7 @@ import remarkGfm from 'remark-gfm';
 import mermaid from 'mermaid';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { useTheme } from '@/hooks/use-theme';
+import { useTheme } from '@/context/ThemeContext';
 import { cn } from '@/lib/utils';
 import { SourceCitation } from './source-citation';
 
@@ -20,8 +20,8 @@ const MermaidRenderer = memo(({ chart, isDark }: { chart: string; isDark: boolea
     const renderChart = async () => {
       try {
         setSvg(''); // Reset SVG to force clean re-render on theme change
-        mermaid.initialize({ 
-          startOnLoad: false, 
+        mermaid.initialize({
+          startOnLoad: false,
           theme: isDark ? 'dark' : 'default',
           securityLevel: 'loose',
           fontFamily: 'inherit'
@@ -40,9 +40,9 @@ const MermaidRenderer = memo(({ chart, isDark }: { chart: string; isDark: boolea
   }
 
   return (
-    <div 
+    <div
       className="mermaid-chart flex justify-center py-4 bg-slate-900/50 rounded-lg border border-slate-800 my-4 overflow-x-auto"
-      dangerouslySetInnerHTML={{ __html: svg }} 
+      dangerouslySetInnerHTML={{ __html: svg }}
     />
   );
 });
@@ -84,7 +84,8 @@ const PreWithCopy = memo(({ children, isAssistant }: { children: React.ReactNode
 
 export const ChatMessage = memo(({ message, isCompact }: { message: ChatMessageType; isCompact?: boolean }) => {
   const isAssistant = message.role === 'assistant';
-  const { isDark } = useTheme();
+  const { theme, primaryColor } = useTheme();
+  const isDark = theme === 'dark';
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const handleDownload = () => {
@@ -105,7 +106,7 @@ export const ChatMessage = memo(({ message, isCompact }: { message: ChatMessageT
       const container = scrollRef.current;
       // Use a small threshold to check if we should scroll
       const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
-      
+
       if (isAtBottom) {
         container.scrollTop = container.scrollHeight;
       }
@@ -113,39 +114,40 @@ export const ChatMessage = memo(({ message, isCompact }: { message: ChatMessageT
   }, [message.content, isAssistant]);
 
   return (
-    <div className={cn(
-      "flex transition-all",
-      isCompact ? "gap-2 p-3" : "gap-4 p-6",
-      isAssistant ? 'bg-slate-50 dark:bg-slate-900/50 border-y border-slate-100 dark:border-slate-800' : ''
-    )}>
+      <div className={cn(
+        "flex transition-all",
+        isCompact ? "gap-2 p-3" : "gap-4 p-6",
+        "chat-bubble panel-bg panel-elev",
+        isAssistant ? "bg-primary text-white" : ""
+      )}>
       {!isCompact && (
-        <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${isAssistant ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                  <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${isAssistant ? 'text-white' : 'bg-slate-200 dark:bg-slate-700 text-primary dark:text-secondary'}`} style={isAssistant ? { backgroundColor: primaryColor } : undefined}>
           {isAssistant ? <Bot size={18} /> : <User size={18} />}
         </div>
       )}
-      
+
       <div className={cn("max-w-none flex-1", isCompact ? "space-y-2" : "space-y-4")}>
-        <div 
+        <div
           ref={scrollRef}
           className="max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800"
         >
-          <div className="prose prose-slate dark:prose-invert max-w-none text-sm leading-relaxed 
+          <div className="prose prose-slate text-primary dark:prose-invert max-w-none text-sm leading-relaxed 
             prose-p:leading-relaxed prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-800 prose-p:my-1
-            prose-code:text-blue-600 dark:prose-code:text-blue-400 prose-code:bg-blue-50 dark:prose-code:bg-blue-900/20 
+            prose-code:text-primary dark:prose-code:text-primary prose-code:bg-blue-50 dark:prose-code:bg-blue-900/20 
             prose-code:px-1 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
             {useMemo(() => (
-              <ReactMarkdown 
+              <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
                   pre: ({ children }) => <PreWithCopy isAssistant={isAssistant}>{children}</PreWithCopy>,
-                code({ 
-                  node, 
-                  className, 
-                  children, 
-                  ref, 
-                  style, 
-                  ...props 
-                }: any) {
+                  code({
+                    node,
+                    className,
+                    children,
+                    ref,
+                    style,
+                    ...props
+                  }: any) {
                     const match = /language-(\w+)/.exec(className || '');
                     const isInline = !className;
 
@@ -198,27 +200,27 @@ export const ChatMessage = memo(({ message, isCompact }: { message: ChatMessageT
         )}
 
         {isAssistant && message.metadata && (
-           <div className="flex items-center gap-4 pt-2 text-[10px] text-slate-400 font-mono border-t border-slate-100 dark:border-slate-800/50 w-full justify-between">
-              <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1.5">
-                <Clock size={10} className="text-slate-500" /> 
+          <div className="flex items-center gap-4 pt-2 text-[10px] text-slate-400 font-mono border-t border-slate-100 dark:border-slate-800/50 w-full justify-between">
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5 text-secondary">
+                <Clock size={10} className="text-secondary" />
                 {message.metadata?.timings?.total_inference_ms ?? 0}ms
               </span>
-              <span className="w-1 h-1 rounded-full bg-slate-200 dark:bg-slate-800" />
-              <span className="flex items-center gap-1.5">
-                <BarChart3 size={10} className="text-slate-500" />
+              <span className="w-1 h-1 rounded-full bg-secondary" />
+              <span className="flex items-center gap-1.5 text-secondary">
+                <BarChart3 size={10} className="text-secondary" />
                 Score: {(message.score ?? 0).toFixed(4)}
               </span>
-              </div>
-              <button 
-                onClick={handleDownload}
-                className="flex items-center gap-1.5 hover:text-blue-600 transition-colors"
-                title="Download as Markdown"
-              >
-                <Download size={12} />
-                Export .md
-              </button>
-           </div>
+            </div>
+            <button
+              onClick={handleDownload}
+              className="flex items-center gap-1.5 hover:text-blue-600 transition-colors"
+              title="Download as Markdown"
+            >
+              <Download size={12} />
+              Export .md
+            </button>
+          </div>
         )}
       </div>
     </div>

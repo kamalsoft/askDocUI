@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/shared/app-shell";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { Providers } from "@/components/shared/providers";
 import { Toaster } from "sonner";
 
@@ -23,12 +24,14 @@ export default function RootLayout({
         className={`${inter.className} h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans`}
         suppressHydrationWarning
       >
-        <Providers>
-          <Toaster position="top-right" richColors />
-          <AppShell>
-            {children}
-          </AppShell>
-        </Providers>
+        <ThemeProvider>
+          <Providers>
+            <Toaster position="top-right" richColors />
+            <AppShell>
+              {children}
+            </AppShell>
+          </Providers>
+        </ThemeProvider>
       </body>
     </html>
   );

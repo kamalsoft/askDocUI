@@ -3,7 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { docsService } from '@/services/docs.service';
 import Link from 'next/link';
-import { Activity, ShieldCheck, ShieldAlert, ShieldX } from 'lucide-react';
+import { Activity, ShieldCheck, ShieldAlert, ShieldX, Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/context/ThemeContext';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Tooltip } from './tooltip';
 
 export function Navbar() {
@@ -41,7 +43,8 @@ export function Navbar() {
           <span className="text-[10px] font-black uppercase tracking-tighter">
             {status.label}
           </span>
-        </div>
+                    </div>
+            <ThemeToggle />
         
         <div className="hidden md:flex items-center gap-4 border-l border-slate-200 dark:border-slate-800 pl-6">
             <div className="flex flex-col items-end">

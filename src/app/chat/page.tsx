@@ -463,7 +463,7 @@ export default function ChatPage() {
       </div>
 
       {/* Main Chat View */}
-      <div className="flex-1 flex flex-col min-w-0 relative bg-white dark:bg-slate-950 transition-all duration-300">
+        <div className="flex-1 flex flex-col min-w-0 relative panel-bg panel-elev transition-all duration-300">
         {/* Sidebar Toggle for Collapsed View */}
         {!isSidebarOpen && (
           <div className="absolute top-4 left-4 z-30 animate-in fade-in zoom-in duration-300">

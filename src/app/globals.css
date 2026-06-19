@@ -1,38 +1,40 @@
 @import "tailwindcss";
 
+/* Theme configuration — Tailwind v4 CSS-based config */
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-
-  /* Premium Color Palette */
-  --color-slate-900: #0f172a;
-  --color-slate-950: #020617;
-  --color-blue-600: #2563eb;
-  --color-blue-500: #3b82f6;
-  --color-blue-400: #60a5fa;
-  --color-blue-50: #eff6ff;
-  
-  --color-emerald-500: #10b981;
-  --color-emerald-400: #34d399;
-  --color-amber-500: #f59e0b;
-  --color-red-500: #ef4444;
-
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
 }
 
+/* Custom CSS variables */
 :root {
-  --background: #f8fafc; /* slate-50 */
-  --foreground: #0f172a; /* slate-900 */
+  /* Primary color (default) */
+  --color-primary: #656a70;
+
+  --background: #f8fafc;
+  /* slate-50 */
+  --foreground: #0f172a;
+  /* slate-900 */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #020617; /* slate-950 */
-    --foreground: #f1f5f9; /* slate-100 */
-  }
+/* Dark mode overrides */
+.dark {
+  --background: #020617;
+  /* slate-950 */
+  --foreground: #f1f5f9;
+  /* slate-100 */
 }
 
+/* Utility classes for primary color */
+.bg-primary {
+  background-color: var(--color-primary) !important;
+}
+
+.text-primary {
+  color: var(--color-primary) !important;
+}
+
+/* Global body styles */
 body {
   background: var(--background);
   color: var(--foreground);
@@ -46,19 +48,86 @@ body {
   width: 6px;
   height: 6px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: rgba(148, 163, 184, 0.3);
   border-radius: 10px;
 }
+
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: rgba(51, 65, 85, 0.5);
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(148, 163, 184, 0.5);
 }
+
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(71, 85, 105, 0.8);
+}
+
+/* Card background with subtle 3D gradient and shadow */
+.bg-card {
+  background: linear-gradient(to bottom right, #0f172a, #020617);
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Chat bubble component */
+.chat-bubble {
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #0f172a;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dark .chat-bubble {
+  color: #e2e8f0;
+}
+
+.chat-bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Panel background – clear glass card with subtle 3D effect */
+.panel-bg {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark .panel-bg {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+/* Subtle elevation for the chat panel */
+.panel-elev {
+  border-radius: 0.75rem;
+  /* Light mode – soft diffused shadow */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Dark mode elevation adjustments */
+.dark .panel-elev {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Primary and secondary text colors – premium palette */
+.text-primary {
+  color: var(--foreground) !important;
+}
+
+.text-secondary {
+  color: var(--foreground);
+  opacity: 0.6;
 }
