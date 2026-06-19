@@ -10,7 +10,7 @@ export default function Icon() {
       <div
         style={{
           fontSize: 20,
-          background: '#2563eb', // Tailwind blue-600
+          background: '#9398a3ff', // Tailwind blue-600
           width: '100%',
           height: '100%',
           display: 'flex',

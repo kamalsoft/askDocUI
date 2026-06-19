@@ -49,7 +49,7 @@ export default function Home() {
         scrollToFirstStep
         onEvent={handleJoyrideCallback}
         options={{
-          primaryColor: '#2563eb',
+          primaryColor: '#9398a3ff',
           textColor: '#0f172a',
           backgroundColor: '#ffffff',
           arrowColor: '#ffffff',
@@ -113,8 +113,8 @@ export default function Home() {
               desc: "Conversation history is keyed to your machine and stored in a local SQLite DB."
             }
           ].map((feature, i) => (
-            <div 
-              key={i} 
+            <div
+              key={i}
               className="p-8 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/50 dark:border-slate-800/50 rounded-3xl text-left space-y-4 hover:border-blue-300 dark:hover:border-blue-900/50 transition-all hover:shadow-lg hover:-translate-y-1 group"
             >
               <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">

@@ -12,7 +12,7 @@ const ThemeContext = createContext<ThemeContextProps | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [primaryColor, setPrimaryColor] = useState<string>('#2563eb'); // default Tailwind blue-600
+  const [primaryColor, setPrimaryColor] = useState<string>('#9398a3ff'); // default Tailwind blue-600
 
   // Initialize theme from localStorage or system preference
   useEffect(() => {
